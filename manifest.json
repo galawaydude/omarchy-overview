@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "galawaydude.overview",
+  "name": "Overview",
+  "version": "0.1.0",
+  "author": "galawaydude",
+  "license": "MIT",
+  "description": "GNOME-style window overview with live thumbnails and workspace tabs.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overview.qml"
+  }
+}
