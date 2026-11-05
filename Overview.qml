@@ -397,6 +397,7 @@ Item {
 
               delegate: ScreencopyView {
                 required property var modelData
+                layer.enabled: true
                 readonly property var r: root.localRect(modelData)
                 x: r.x * tab.sx
                 y: r.y * tab.sx
@@ -514,10 +515,14 @@ Item {
         Behavior on height { NumberAnimation { duration: root.animMs; easing.type: Easing.OutCubic } }
         Behavior on opacity { NumberAnimation { duration: root.animMs } }
 
+        // Captures write their own alpha straight through to the overlay, so a
+        // translucent window would show the real desktop behind. A layer makes
+        // it blend over the backdrop instead (same on the tab and drag views).
         ScreencopyView {
           anchors.fill: parent
           captureSource: tile.modelData.wayland
           live: true
+          layer.enabled: true
         }
 
         Rectangle {
@@ -627,6 +632,7 @@ Item {
       visible: root.dragWin !== null
       captureSource: root.dragWin ? root.dragWin.wayland : null
       live: true
+      layer.enabled: true
       z: 10
       width: Style.space(200)
       height: root.dragWin && root.dragWin.lastIpcObject.size
