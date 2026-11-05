@@ -2,6 +2,8 @@
 
 A GNOME-style window overview for the [Omarchy](https://omarchy.org) shell: every window spread out as a live thumbnail, with your workspaces as tabs along the top.
 
+![Overview of a workspace](preview.png)
+
 ## Install
 
 ```bash
