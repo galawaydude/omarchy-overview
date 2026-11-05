@@ -52,13 +52,31 @@ Item {
     var q = query.trim().toLowerCase()
     return Hyprland.toplevels.values.filter(function (t) {
       var o = t.lastIpcObject
-      if (!o || !o.at || o.hidden || !t.workspace || t.workspace.id <= 0) return false
-      if (!q) return viewedWs === 0 || t.workspace.id === viewedWs
+      if (!o || !o.at || o.hidden || !t.workspace || (t.workspace.id <= 0 && !isMinimized(t))) return false
+      if (!q) return viewedWs === 0 || homeWs(t) === viewedWs
       return ((o.title || "") + " " + (o.class || "")).toLowerCase().indexOf(q) !== -1
     }).sort(function (a, b) {
       var oa = a.lastIpcObject, ob = b.lastIpcObject
-      return (a.workspace.id - b.workspace.id) || (oa.at[1] - ob.at[1]) || (oa.at[0] - ob.at[0])
+      return (homeWs(a) - homeWs(b)) || (oa.at[1] - ob.at[1]) || (oa.at[0] - ob.at[0])
     })
+  }
+
+  // Omarchy minimizes a window by parking it on this special workspace, tagged
+  // with the workspace it came from; the dock brings it back.
+  function isMinimized(t) {
+    return !!t.workspace && t.workspace.name === "special:minimized"
+  }
+
+  // The workspace a window belongs to: its own, or where it was minimized from
+  // (0 if unknown).
+  function homeWs(t) {
+    if (!isMinimized(t)) return t.workspace ? t.workspace.id : 0
+    var tags = (t.lastIpcObject && t.lastIpcObject.tags) || []
+    for (var i = 0; i < tags.length; i++) {
+      var m = /^omarchy-minimized-from-(\d+)/.exec(tags[i])
+      if (m) return parseInt(m[1])
+    }
+    return 0
   }
 
   // Thumbnails only change when the set of windows does; Hyprland events
@@ -131,7 +149,15 @@ Item {
   function activate(t) {
     if (!t || !t.lastIpcObject) return
     picked = t
-    dispatch('hl.dsp.focus({ window = "address:' + t.lastIpcObject.address + '" })')
+    var target = 'window = "address:' + t.lastIpcObject.address + '"'
+    // A minimized window comes back to where it was minimized from first.
+    var focus = 'hl.dsp.focus({ ' + target + ' })'
+    if (isMinimized(t)) {
+      var move = 'hl.dsp.window.move({ workspace = "' + (homeWs(t) || startWs) + '", ' + target + ' })'
+      Quickshell.execDetached(["sh", "-c", 'hyprctl dispatch "$1" && hyprctl dispatch "$2"', "sh", move, focus])
+    } else {
+      dispatch(focus)
+    }
     dismiss()
   }
 
@@ -589,7 +615,8 @@ Item {
             verticalAlignment: Text.AlignVCenter
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
-            text: ((root.query || root.viewedWs === 0) && tile.modelData.workspace ? tile.modelData.workspace.name + "  ·  " : "") + (tile.o.title || tile.o.class || "")
+            text: ((root.query || root.viewedWs === 0) && root.homeWs(tile.modelData) ? root.homeWs(tile.modelData) + "  ·  " : "")
+              + (root.isMinimized(tile.modelData) ? "minimized  ·  " : "") + (tile.o.title || tile.o.class || "")
             color: root.fg
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
